@@ -35,20 +35,26 @@ export default async function handler(req, res) {
           text: `Hi,\nReminder to follow up with ${lead.name} from ${lead.company || 'N/A'}.\n\nNotes: ${lead.notes || 'No notes'}.\n\nRegards,\nYour CRM App`,
         };
 
-        await sgMail.send(msg);
-        await db
-          .collection(`leads/${userDoc.id}/items/${leadDoc.id}/activity`)
-          .add({
-            type: 'reminder_sent',
-            timestamp: new Date(),
-            metadata: { email: lead.email },
-          });
+        try {
+          await sgMail.send(msg);
+          await db
+            .collection(`leads/${userDoc.id}/items/${leadDoc.id}/activity`)
+            .add({
+              type: 'reminder_sent',
+              timestamp: new Date(),
+              metadata: { email: lead.email },
+            });
+        } catch (error) {
+          console.error('Error sending email for lead:', lead.name, error);
+          res.status(500).json({ error: 'Error sending email' });
+          return;
+        }
       }
     }
 
     res.status(200).json({ message: 'Reminders sent' });
   } catch (error) {
-    console.error('Reminder error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error fetching leads:', error);
+    res.status(500).json({ error: 'Error fetching leads' });
   }
 }
