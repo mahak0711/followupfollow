@@ -1,29 +1,39 @@
 'use client';
 
-import { useRouter } from 'next/navigation'; 
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 const Home = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    // Simulate a logged-in user
-    const dummyUser = { name: "Mahak" };
-    setUser(dummyUser);
-    setLoading(false);
-  }, []);
+  const handleLoginClick = () => {
+    router.push('/login');
+  };
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]); 
-
-  if (loading) return <p>Loading...</p>;
-
-  return <div>Welcome to the Home page, {user?.name}!</div>;
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      {user ? (
+        <h1>Welcome back, {user.name}!</h1>
+      ) : (
+        <>
+          <h1>Welcome to FollowUpFlow</h1>
+          <p>Please log in to continue.</p>
+          <button
+            onClick={handleLoginClick}
+            style={{
+              padding: '0.5rem 1rem',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              marginTop: '1rem',
+            }}
+          >
+            Go to Login
+          </button>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default Home;
