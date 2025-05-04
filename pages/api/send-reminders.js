@@ -1,15 +1,22 @@
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import sgMail from '@sendgrid/mail';
 
-const app = initializeApp({ credential: applicationDefault() });
-const db = getFirestore(app);
+// Initialize Firebase Admin if not already initialized
+if (!getApps().length) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Set in Vercel dashboard
+  initializeApp({
+    credential: cert(serviceAccount),
+  });
+}
+
+const db = getFirestore();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Set this in Vercel dashboard
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    return res.status(405).send('Only GET allowed');
+    return res.status(405).json({ error: 'Only GET allowed' });
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -30,13 +37,16 @@ export default async function handler(req, res) {
 
         const msg = {
           to: lead.email,
-          from: 'kankariamahak7@gmail.com', // Use verified sender
+          from: 'kankariamahak7@gmail.com', // Must be a verified sender on SendGrid
           subject: `Follow-up Reminder: ${lead.name}`,
-          text: `Hi,\nReminder to follow up with ${lead.name} from ${lead.company || 'N/A'}.\n\nNotes: ${lead.notes || 'No notes'}.\n\nRegards,\nYour CRM App`,
+          text: `Hi,\n\nReminder to follow up with ${lead.name} from ${lead.company || 'N/A'}.\n\nNotes: ${
+            lead.notes || 'No notes'
+          }.\n\nRegards,\nYour CRM App`,
         };
 
         try {
           await sgMail.send(msg);
+
           await db
             .collection(`leads/${userDoc.id}/items/${leadDoc.id}/activity`)
             .add({
@@ -45,16 +55,14 @@ export default async function handler(req, res) {
               metadata: { email: lead.email },
             });
         } catch (error) {
-          console.error('Error sending email for lead:', lead.name, error);
-          res.status(500).json({ error: 'Error sending email' });
-          return;
+          console.error(`Failed to send email for ${lead.name}:`, error);
         }
       }
     }
 
-    res.status(200).json({ message: 'Reminders sent' });
+    return res.status(200).json({ message: 'Reminders sent' });
   } catch (error) {
     console.error('Error fetching leads:', error);
-    res.status(500).json({ error: 'Error fetching leads' });
+    return res.status(500).json({ error: 'Error fetching leads' });
   }
 }
