@@ -1,20 +1,34 @@
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import sgMail from '@sendgrid/mail';
 
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+let db;
 
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
+if (!getApps().length) {
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8')
+    );
+
+    initializeApp({
+      credential: cert(decoded),
+    });
+
+    db = getFirestore(); // Initialize here after app is ready
+  } catch (err) {
+    console.error('Firebase Admin initialization error:', err);
+  }
+} else {
+  db = getFirestore(getApp());
 }
 
-const db = getFirestore();
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Set this in Vercel dashboard
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 export default async function handler(req, res) {
+  if (!db) {
+    return res.status(500).json({ error: 'Firestore not initialized' });
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Only GET allowed' });
   }
@@ -37,11 +51,9 @@ export default async function handler(req, res) {
 
         const msg = {
           to: lead.email,
-          from: 'kankariamahak7@gmail.com', // Must be a verified sender on SendGrid
+          from: 'your-email@yourdomain.com', // ✅ Replace with verified sender
           subject: `Follow-up Reminder: ${lead.name}`,
-          text: `Hi,\n\nReminder to follow up with ${lead.name} from ${lead.company || 'N/A'}.\n\nNotes: ${
-            lead.notes || 'No notes'
-          }.\n\nRegards,\nYour CRM App`,
+          text: `Hi,\n\nReminder to follow up with ${lead.name} from ${lead.company || 'N/A'}.\n\nNotes: ${lead.notes || 'No notes'}.\n\nRegards,\nYour CRM App`,
         };
 
         try {
