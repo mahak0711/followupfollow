@@ -8,9 +8,11 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);  // Loading state
   const router = useRouter();
 
   const handleAuth = async () => {
+    setLoading(true); // Start loading
     try {
       if (isSignUp) {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -20,6 +22,8 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err) {
       alert(err.message);
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -46,8 +50,9 @@ export default function LoginPage() {
         <button
           onClick={handleAuth}
           className="w-full bg-black text-white py-2 rounded hover:opacity-90"
+          disabled={loading}  // Disable button while loading
         >
-          {isSignUp ? "Create Account" : "Login"}
+          {loading ? "Processing..." : isSignUp ? "Create Account" : "Login"}
         </button>
         <p
           className="text-center text-sm mt-4 cursor-pointer text-blue-500"
