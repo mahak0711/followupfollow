@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
+.env
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -29,7 +30,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
+firebase-debug.log
+firebase-error.log
 # env files (can opt-in for committing if needed)
 .env*
 
