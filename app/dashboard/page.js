@@ -5,6 +5,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import KanbanBoard from "@/components/KanbanBoard";
 import LeadDetailModal from "@/components/LeadDetailModal"; // Import LeadDetailModal
+import AnalyticsDashboard from "./AnalyticsDashboard";
 
 const STAGES = ["New", "Contacted", "Demo Scheduled", "Closed"];
 
@@ -60,6 +61,7 @@ const Dashboard = () => {
       {showModal && (
         <LeadDetailModal lead={selectedLead} onClose={() => setShowModal(false)} />
       )}
+      <AnalyticsDashboard />
     </div>
   );
 };
