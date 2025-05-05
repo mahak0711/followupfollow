@@ -4,10 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import LoadingSpinner from '@/components/LoadingSpinner';
-export const metadata = {
-  title: "FollowUpFollow",
-  description: "A lightweight, PWA-ready CRM designed for solo founders and small teams.",
-};
+
 const Home = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
