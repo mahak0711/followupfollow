@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeToLeads, addLead, updateLeadStatus } from '../lib/firestore';
 import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core';
+import {
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 
@@ -38,11 +45,20 @@ const KanbanBoard = ({ onLeadClick }) => {
       handleMoveLead(leadId, newStatus);
     }
   };
-
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance:20, // Prevent accidental drag on tap
+      },
+    })
+  );
   return (
     <div className="container mx-auto p-6">
-      <DndContext onDragEnd={handleDragEnd}>
-        <div className="kanban-board flex space-x-6">
+<DndContext
+  sensors={sensors}
+  collisionDetection={closestCenter}
+  onDragEnd={handleDragEnd}
+>        <div className="kanban-board flex space-x-6">
           {['New', 'Contacted', 'Demo Scheduled', 'Closed'].map((status) => (
             <KanbanColumn
               key={status}

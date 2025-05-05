@@ -1,87 +1,63 @@
 'use client';
-import ErrorBoundary from '../components/ErrorBoundary';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase'; // Assuming you're using Firebase for auth
+import { auth } from '@/lib/firebase';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const Home = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Real auth check logic, e.g., checking Firebase auth state
-        const currentUser = auth.currentUser; // For Firebase
-        setUser(currentUser);
-        setLoading(false);
-      } catch (err) {
-        setError('Error checking authentication.');
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setIsLoggedIn(true);
+        router.push('/dashboard');
+      } else {
+        setIsLoggedIn(false);
         setLoading(false);
       }
-    };
+    });
 
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [loading, user, router]);
-
-  const handleLogout = () => {
-    // Log the user out and redirect to login
-    auth.signOut(); // Assuming you're using Firebase auth
-    setUser(null);
-    router.push('/login');
-  };
+    return () => unsubscribe();
+  }, [router]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-screen bg-black">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <ErrorBoundary>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-semibold text-gray-800 mb-6">Welcome to the Home Page!</h1>
-
-        {error && (
-          <div className="bg-red-100 text-red-600 p-4 rounded-md mb-6">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {user ? (
-          <div className="flex flex-col items-center">
-            <p className="text-lg text-gray-700 mb-4">Hello, {user.displayName || user.email}!</p>
-            <button
-              onClick={handleLogout}
-              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
-            >
-              Logout
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <p className="text-lg text-gray-700 mb-4">Please log in to continue.</p>
-            <button
-              onClick={() => router.push('/login')}
-              className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200"
-            >
-              Go to Login
-            </button>
-          </div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black px-4">
+      <div className="text-center max-w-3xl">
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          FollowUpFlow
+        </h1>
+        <p className="text-lg md:text-xl text-gray-300 mb-6">
+          A lightweight, PWA-ready CRM designed for solo founders and small teams.
+        </p>
+        
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition"
+          >
+            Log In
+          </button>
+          <button
+            onClick={() => router.push('/signup')}
+            className="bg-white text-black px-6 py-2 rounded-lg hover:bg-gray-200 transition"
+          >
+            Get Started Free
+          </button>
+        </div>
       </div>
-    </ErrorBoundary>
+    </div>
   );
 };
 

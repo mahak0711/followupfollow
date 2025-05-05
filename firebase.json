@@ -1,8 +1,21 @@
 {
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "/**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
+      "codebase": "default"
+    },
+    {
+      "source": "followupfollow",
+      "codebase": "followupfollow",
       "ignore": [
         "node_modules",
         ".git",
