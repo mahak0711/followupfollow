@@ -1,11 +1,25 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  collection,
+  query,
+  onSnapshot,
+} from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase";
-import { FunnelChart, Funnel, FunnelLabel, LabelList } from "recharts";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  FunnelChart,
+  Funnel,
+  LabelList,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 const STAGES = ["New", "Contacted", "Demo Scheduled", "Closed"];
 
@@ -19,10 +33,9 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch data for funnel chart and leads per day
     const leadsRef = collection(db, "leads", user.uid, "items");
 
-    // Get leads by stage for the funnel chart
+    // Leads by stage
     const unsubscribeLeadsByStage = onSnapshot(leadsRef, (snapshot) => {
       const stageCounts = { New: 0, Contacted: 0, "Demo Scheduled": 0, Closed: 0 };
       snapshot.forEach((doc) => {
@@ -32,24 +45,26 @@ const AnalyticsDashboard = () => {
         }
       });
       setLeadsByStage([
-        { name: "New", value: stageCounts.New },
-        { name: "Contacted", value: stageCounts.Contacted },
-        { name: "Demo Scheduled", value: stageCounts["Demo Scheduled"] },
-        { name: "Closed", value: stageCounts.Closed },
+        { name: "New", value: stageCounts.New, fill: "#60a5fa" },           
+        { name: "Contacted", value: stageCounts.Contacted, fill: "#34d399" },
+        { name: "Demo Scheduled", value: stageCounts["Demo Scheduled"], fill: "#fbbf24" }, 
+        { name: "Closed", value: stageCounts.Closed, fill: "#f87171" },     // red-400
       ]);
+      
     });
 
-    // Get leads created per day for time-series chart
+    // Leads created per day
     const unsubscribeLeadsPerDay = onSnapshot(leadsRef, (snapshot) => {
       const leadsCountPerDay = {};
       snapshot.forEach((doc) => {
         const lead = doc.data();
-        const createdAt = lead.createdAt.toDate(); // assuming there's a createdAt field
-        const day = createdAt.toISOString().split("T")[0]; // format as YYYY-MM-DD
-        leadsCountPerDay[day] = (leadsCountPerDay[day] || 0) + 1;
+        if (lead.createdAt?.toDate) {
+          const createdAt = lead.createdAt.toDate();
+          const day = createdAt.toISOString().split("T")[0];
+          leadsCountPerDay[day] = (leadsCountPerDay[day] || 0) + 1;
+        }
       });
 
-      // Convert to an array and sort by date
       const sortedLeads = Object.keys(leadsCountPerDay).map((date) => ({
         date,
         count: leadsCountPerDay[date],
@@ -58,32 +73,39 @@ const AnalyticsDashboard = () => {
       setLeadsPerDay(sortedLeads.sort((a, b) => new Date(a.date) - new Date(b.date)));
     });
 
-    // Calculate key metrics: Conversion Rate and Average Time in Stage
-    const unsubscribeLeadActivities = onSnapshot(collection(db, "activities", user.uid, "logs"), (activitySnapshot) => {
-      let totalLeadsCreated = 0;
-      let totalLeadsClosed = 0;
-      let totalTimeInStage = 0;
-      let leadsCount = 0;
+    // Activities: Conversion Rate & Avg Time
+    const unsubscribeLeadActivities = onSnapshot(
+      collection(db, "activities", user.uid, "logs"),
+      (activitySnapshot) => {
+        let totalLeadsCreated = 0;
+        let totalLeadsClosed = 0;
+        let totalTimeInStage = 0;
+        let leadsCount = 0;
 
-      activitySnapshot.forEach((doc) => {
-        const activity = doc.data();
-        if (activity.type === "lead_created") {
-          totalLeadsCreated++;
-        } else if (activity.type === "lead_closed") {
-          totalLeadsClosed++;
-          totalTimeInStage += activity.timeInStage; // assuming timeInStage is logged in the activity
-          leadsCount++;
-        }
-      });
+        activitySnapshot.forEach((doc) => {
+          const activity = doc.data();
+          if (activity.type === "lead_created") {
+            totalLeadsCreated++;
+          } else if (activity.type === "lead_closed") {
+            totalLeadsClosed++;
+            if (activity.timeInStage) {
+              totalTimeInStage += activity.timeInStage;
+              leadsCount++;
+            }
+          }
+        });
 
-      // Conversion Rate Calculation
-      setConversionRate(((totalLeadsClosed / totalLeadsCreated) * 100).toFixed(2));
+        setConversionRate(
+          totalLeadsCreated > 0
+            ? ((totalLeadsClosed / totalLeadsCreated) * 100).toFixed(2)
+            : 0
+        );
+        setAvgTimeInStage(
+          leadsCount > 0 ? (totalTimeInStage / leadsCount).toFixed(2) : 0
+        );
+      }
+    );
 
-      // Average Time in Stage Calculation
-      setAvgTimeInStage((totalTimeInStage / leadsCount).toFixed(2)); // assuming timeInStage is in days or hours
-    });
-
-    // Cleanup subscriptions on unmount
     return () => {
       unsubscribeLeadsByStage();
       unsubscribeLeadsPerDay();
@@ -92,24 +114,41 @@ const AnalyticsDashboard = () => {
   }, [user]);
 
   return (
-    <div className="p-6  min-h-screen">
-      <h1 className="text-3xl font-bold text-center text-blue-700 mb-8">Analytics Dashboard</h1>
+    <div className="p-6 min-h-screen">
+      <h1 className="text-3xl font-bold text-center text-blue-700 mb-8">
+        Analytics Dashboard
+      </h1>
 
-      {/* Funnel Chart */}
-      <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Lead Funnel</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <FunnelChart>
-            <Funnel data={leadsByStage} dataKey="value" shape="rectangular">
-              <LabelList position="top" fill="#4A4A4A" fontSize={16} dataKey="name" />
-            </Funnel>
-          </FunnelChart>
-        </ResponsiveContainer>
+      {/* Lead Funnel Chart */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <h2 className="text-xl font-medium text-gray-600 mb-4">Lead Funnel</h2>
+        <div style={{ width: "100%", height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <FunnelChart>
+              
+              <Funnel
+                data={leadsByStage}
+                dataKey="value"
+                isAnimationActive
+                shape="rectangular"
+              >
+                <LabelList
+                  position="center"
+                  dataKey="name"
+                  fill="#000"
+                  fontSize={16}
+                />
+              </Funnel>
+            </FunnelChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      {/* Time-Series Chart */}
+      {/* Time Series Chart */}
       <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Leads Created per Day</h2>
+        <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+          Leads Created per Day
+        </h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={leadsPerDay}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -126,11 +165,15 @@ const AnalyticsDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <p className="text-sm text-gray-600">Conversion Rate</p>
-          <p className="text-3xl font-semibold text-blue-600">{conversionRate}%</p>
+          <p className="text-3xl font-semibold text-blue-600">
+            {conversionRate}%
+          </p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <p className="text-sm text-gray-600">Average Time in Stage (days)</p>
-          <p className="text-3xl font-semibold text-blue-600">{avgTimeInStage} days</p>
+          <p className="text-3xl font-semibold text-blue-600">
+            {avgTimeInStage} days
+          </p>
         </div>
       </div>
     </div>
