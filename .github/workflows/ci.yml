@@ -45,7 +45,7 @@ jobs:
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
       - name: Run Lighthouse CI
-        run: lhci autorun --collect.url=https://your-website.com --collect.headful=false
+        run: lhci autorun --collect.url=https://followupfollow.vercel.app/--collect.headful=false
 
   deploy:
     runs-on: ubuntu-latest
