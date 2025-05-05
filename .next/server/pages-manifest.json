@@ -1,6 +1,5 @@
 {
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/api/send-reminders": "pages/api/send-reminders.js"
+  "/_document": "pages/_document.js"
 }

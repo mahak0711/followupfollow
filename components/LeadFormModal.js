@@ -16,6 +16,8 @@ export default function LeadFormModal({ onClose }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);  // To track loading state
+  const [success, setSuccess] = useState(false);  // To track submission success
 
   const validate = () => {
     let errs = {};
@@ -29,16 +31,27 @@ export default function LeadFormModal({ onClose }) {
     const errs = validate();
     if (Object.keys(errs).length > 0) return setErrors(errs);
 
+    setLoading(true);
     try {
       await addDoc(collection(db, "leads", user.uid, "items"), {
         ...form,
         status: "New",
         createdAt: serverTimestamp(),
       });
-      onClose();
+      setForm({
+        name: "",
+        email: "",
+        company: "",
+        notes: "",
+        followUpDate: "",
+      });  // Clear the form fields
+      setSuccess(true);  // Indicate successful submission
+      onClose();  // Close the modal
     } catch (err) {
       alert("Failed to submit lead.");
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,6 +80,10 @@ export default function LeadFormModal({ onClose }) {
         </button>
 
         <h2 className="text-xl font-semibold text-stone-800 mb-4">Add New Lead</h2>
+
+        {/* Success Message */}
+        {success && <p className="text-green-500 mb-4">Lead added successfully!</p>}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {["name", "email", "company", "notes", "followUpDate"].map((field) => (
             <div key={field}>
@@ -91,8 +108,9 @@ export default function LeadFormModal({ onClose }) {
             <button
               type="submit"
               className="px-4 py-2 bg-black text-white rounded"
+              disabled={loading}  // Disable the button while loading
             >
-              Add Lead
+              {loading ? "Adding..." : "Add Lead"}
             </button>
           </div>
         </form>

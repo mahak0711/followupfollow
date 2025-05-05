@@ -1,17 +1,18 @@
-"use client";
-import React, { useEffect, useState } from "react";
+"use client"
+import React, { useState, useEffect } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
 import KanbanBoard from "@/components/KanbanBoard";
-import LeadFormModal from "@/components/LeadFormModal";
+import LeadDetailModal from "@/components/LeadDetailModal"; // Import LeadDetailModal
 
 const STAGES = ["New", "Contacted", "Demo Scheduled", "Closed"];
 
 const Dashboard = () => {
   const [user] = useAuthState(auth);
   const [columns, setColumns] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null); // To hold the selected lead
+  const [showModal, setShowModal] = useState(false); // To control the modal visibility
 
   useEffect(() => {
     if (!user) return;
@@ -33,6 +34,7 @@ const Dashboard = () => {
         }
       });
 
+      console.log("Fetched Leads by Stage:", leadsByStage); // Log fetched leads
       setColumns(leadsByStage);
     });
 
@@ -43,17 +45,21 @@ const Dashboard = () => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Kanban Dashboard</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-black text-white px-4 py-2 rounded"
-        >
-          + Add Lead
-        </button>
       </div>
 
-      <KanbanBoard initialColumns={columns} />
+      <KanbanBoard
+        initialColumns={columns}
+        onLeadClick={(lead) => {
+          console.log("Lead clicked:", lead);  // Log the clicked lead
+          setSelectedLead(lead);
+          setShowModal(true);  // Show the modal
+        }}
+      />
 
-      {showModal && <LeadFormModal onClose={() => setShowModal(false)} />}
+      {/* Display the LeadDetailModal if selectedLead is not null */}
+      {showModal && (
+        <LeadDetailModal lead={selectedLead} onClose={() => setShowModal(false)} />
+      )}
     </div>
   );
 };
